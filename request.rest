@@ -1,0 +1,36 @@
+POST http://localhost:3000/category
+
+Content-Type: application/json
+{
+    "title": "fruits",
+    "image" : "fruits.png",
+    "parent_id" : null
+}
+
+### Получить все категории (GET)
+GET http://localhost:3000/category
+
+### Получить категорию по ID (GET)
+GET http://localhost:3000/category/1
+
+### Создать новую категорию (POST)
+POST http://localhost:3000/category
+Content-Type: application/json
+
+{
+    "title": "Fruits",
+    "image": "fruits.png",
+    "parent_id": null
+}
+
+### Обновить категорию (PUT)
+PUT http://localhost:3000/category/1
+Content-Type: application/json
+
+{
+    "title": "Updated Furniture",
+    "image": "new-furniture.png"
+}
+
+### Удалить категорию (DELETE)
+DELETE http://localhost:3000/category/2
