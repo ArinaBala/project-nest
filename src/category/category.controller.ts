@@ -1,53 +1,54 @@
-import { 
-  Controller, Get, Param, Post, Put, Delete, Body, NotFoundException, HttpCode, HttpStatus 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Param,
+  Body,
 } from '@nestjs/common';
 import { CategoryService } from './category.service.js';
-import type { CategoryType, CategoryCreateType } from './type/CategoryType.js';
+import { CategoryCreateReqDto } from './dtos/category_create.req.dto.js';
+import { CategoryGetResDto } from './dtos/category_get.res.dto.js';
 
 @Controller('category')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
-  getAllCategories(): CategoryType[] {
-    return this.categoryService.getCategories();
+  async getAllCategories(): Promise<CategoryGetResDto[]> {
+    return await this.categoryService.getCategories();
   }
 
   @Get(':id')
-  getCategoryById(@Param('id') id: string): CategoryType {
-    const category: CategoryType | undefined =
-      this.categoryService.getCategoryById(Number(id));
-
-    if (category !== undefined) {
-      return category;
-    }
-
-    throw new NotFoundException('Category not found');
+  async getCategoryById(@Param('id') id: string): Promise<CategoryGetResDto> {
+    return await this.categoryService.getCategoryById(+id);
   }
 
   @Post()
-  createCategory(@Body() categoryDto: CategoryCreateType): CategoryType {
-    return this.categoryService.createCategory(categoryDto);
+  async createCategory(@Body() category: CategoryCreateReqDto): Promise<CategoryGetResDto> {
+    return await this.categoryService.create(category);
   }
 
   @Put(':id')
-  updateCategory(
+  async updateCategory(
     @Param('id') id: string,
-    @Body() categoryDto: Partial<CategoryCreateType>,
-  ): CategoryType {
-    const updatedCategory = this.categoryService.updateCategory(Number(id), categoryDto);
-    if (updatedCategory !== undefined) {
-      return updatedCategory;
-    }
-    throw new NotFoundException('Category not found for update');
+    @Body() dto: CategoryCreateReqDto,
+  ): Promise<CategoryGetResDto> {
+    return await this.categoryService.update(+id, dto);
+  }
+
+  @Patch(':id')
+  async patchCategory(
+    @Param('id') id: string,
+    @Body() dto: Partial<CategoryCreateReqDto>,
+  ): Promise<CategoryGetResDto> {
+    return await this.categoryService.patch(+id, dto);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  deleteCategory(@Param('id') id: string): void {
-    const isDeleted = this.categoryService.deleteCategory(Number(id));
-    if (!isDeleted) {
-      throw new NotFoundException('Category not found for deletion');
-    }
+  async deleteCategory(@Param('id') id: string): Promise<{ message: string }> {
+    return await this.categoryService.remove(+id);
   }
 }
