@@ -18,8 +18,8 @@ export default new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-  entities: ['src/**/*.entity.ts', 'src/**/entities/*.entity.ts'],
-  migrations: ['src/migrations/*.ts'],
+entities: ['src/**/*.entity.ts'],
+ migrations: ['src/database/migrations/*.ts'],
 });
  
  

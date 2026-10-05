@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from "typeorm";
 
-@Entity()
+
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -16,4 +17,7 @@ export class User {
 
   @Column({ default: false })
   is_block: boolean;
+
+  @OneToMany('Address', (address: any) => address.user)
+  addresses: any[];
 }

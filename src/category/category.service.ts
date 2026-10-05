@@ -1,30 +1,56 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './dtos/category.entity.js';
 import { Repository } from 'typeorm';
 import { CategoryCreateReqDto } from './dtos/category_create.req.dto.js';
 import { CategoryGetResDto } from './dtos/category_get.res.dto.js';
+import { Redis } from 'ioredis';
 
 @Injectable()
-export class CategoryService {
+export class CategoryService implements OnModuleInit, OnModuleDestroy {
+  private redis: Redis;
+
   constructor(
     @InjectRepository(Category)
     private readonly _repository: Repository<Category>,
   ) {}
 
-  
+  onModuleInit() {
+    this.redis = new Redis({
+      host: 'localhost',
+      port: 6379,
+    });
+  }
+
+  onModuleDestroy() {
+    this.redis.quit();
+  }
+
   async getCategories(): Promise<CategoryGetResDto[]> {
+    const cacheKey = 'categories_all';
+
+    // 1. Проверяем кэш
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+  
     const categories = await this._repository.find();
-    return categories.map((cat) => ({
+    const result = categories.map((cat) => ({
       id: cat.id,
       title: cat.title,
       slug: cat.slug,
       image: cat.image ?? '',
       parent_id: cat.parent_id,
     }));
+
+    
+    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 60);
+
+    return result;
   }
 
- 
   async getCategoryById(id: number): Promise<CategoryGetResDto> {
     const category = await this._repository.findOne({ where: { id } });
     if (!category) {
@@ -39,7 +65,6 @@ export class CategoryService {
     };
   }
 
-
   async create(dto: CategoryCreateReqDto): Promise<CategoryGetResDto> {
     const category = this._repository.create({
       title: dto.title,
@@ -50,6 +75,7 @@ export class CategoryService {
       description: dto.description,
     });
     const result = await this._repository.save(category);
+    await this.redis.del('categories_all'); 
     return {
       id: result.id,
       title: result.title,
@@ -59,21 +85,15 @@ export class CategoryService {
     };
   }
 
-
   async update(id: number, dto: CategoryCreateReqDto): Promise<CategoryGetResDto> {
     const category = await this._repository.findOne({ where: { id } });
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
     }
 
-    category.title = dto.title;
-    category.slug = dto.slug;
-    category.image = dto.image ?? null;
-    category.is_show = dto.is_show;
-    category.parent_id = dto.parent_id;
-    category.description = dto.description ?? '';
-
+    Object.assign(category, dto);
     const updated = await this._repository.save(category);
+    await this.redis.del('categories_all'); 
     return {
       id: updated.id,
       title: updated.title,
@@ -82,7 +102,6 @@ export class CategoryService {
       parent_id: updated.parent_id,
     };
   }
-
 
   async patch(id: number, dto: Partial<CategoryCreateReqDto>): Promise<CategoryGetResDto> {
     const category = await this._repository.findOne({ where: { id } });
@@ -91,8 +110,8 @@ export class CategoryService {
     }
 
     Object.assign(category, dto);
-
     const updated = await this._repository.save(category);
+    await this.redis.del('categories_all'); 
     return {
       id: updated.id,
       title: updated.title,
@@ -102,7 +121,6 @@ export class CategoryService {
     };
   }
 
-  
   async remove(id: number): Promise<{ message: string }> {
     const category = await this._repository.findOne({ where: { id } });
     if (!category) {
@@ -110,6 +128,7 @@ export class CategoryService {
     }
 
     await this._repository.remove(category);
+    await this.redis.del('categories_all'); 
     return { message: `Category with ID ${id} successfully deleted` };
   }
 }
